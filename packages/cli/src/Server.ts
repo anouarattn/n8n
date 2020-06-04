@@ -76,6 +76,9 @@ import {
 	Not,
 } from 'typeorm';
 
+import { CronJob } from 'cron';
+
+
 import * as basicAuth from 'basic-auth';
 import * as compression from 'compression';
 import * as config from '../config';
@@ -142,6 +145,76 @@ class App {
 
 		this.versions = await GenericHelpers.getVersions();
 		const authIgnoreRegex = new RegExp(`^\/(healthz|${this.endpointWebhook}|${this.endpointWebhookTest})\/?.*$`);
+
+
+		const job = new CronJob('10 * * * * *', () =>  {
+
+			const resultsPromise =  Db.collections.Delay!.find({
+				select: [
+					'id',
+					'endAt',
+					'executionId',
+					'delayedNodes'
+				],
+				where: {
+					endAt : LessThan(new Date())
+				},
+				order: {
+					id: 'DESC',
+				},
+				take: 200,
+			});
+			resultsPromise.then(async (result)=>{
+				for (const entry of result) {
+					const promiseresult =  Db.collections.Execution!.findOne(entry.executionId);
+					promiseresult.then(async  (fullExecutionDataFlatted)=>{
+						if (fullExecutionDataFlatted === undefined) {
+							throw new ResponseHelper.ResponseError(`The execution with the id "${entry.executionId}" does not exist.`, 404, 404);
+						}
+						const fullExecutionData = ResponseHelper.unflattenExecutionData(fullExecutionDataFlatted);
+						if (fullExecutionData.finished === true) {
+							throw new Error('The execution did succeed and can so not be retried.');
+						}
+						const executionMode = 'delay';
+
+						const credentialsPromise =  WorkflowCredentials(fullExecutionData.workflowData.nodes);
+						credentialsPromise.then(async (credentials) =>{
+							fullExecutionData.workflowData.active = false;
+
+							// Start the workflow
+							const data: IWorkflowExecutionDataProcess = {
+								credentials,
+								executionMode,
+								executionData: fullExecutionData.data,
+								workflowData: fullExecutionData.workflowData,
+							};
+							for(const item of JSON.parse(entry.delayedNodes))
+							{
+								const lastNodeExecuted = item.node;
+								const workflowRunner = new WorkflowRunner();
+								const executionIdPromise =  workflowRunner.run(data).then(async (executionId)=>{
+									const executionData = await this.activeExecutionsInstance.getPostExecutePromise(executionId);
+
+									if (executionData === undefined) {
+										throw new Error('The delay did not start for an unknown reason.');
+									}
+								});
+							}
+							if(entry.id !== undefined){
+								Db.collections.Delay!.delete(entry.id);
+								Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
+							}
+
+						});
+
+					});
+
+				}
+			});
+
+
+		}, null, true, 'America/Los_Angeles');
+		job.start();
 
 		// Check for basic auth credentials if activated
 		const basicAuthActive = config.get('security.basicAuth.active') as boolean;
@@ -286,6 +359,8 @@ class App {
 				res.header('Access-Control-Allow-Origin', 'http://localhost:8080');
 				res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
 				res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, sessionid');
+				res.header('Connection', 'keep-alive');
+				res.header('Keep-Alive', 'timeout=30, max=5000');
 				next();
 			});
 		}
@@ -894,6 +969,7 @@ class App {
 				select: [
 					'id',
 					'finished',
+					'delayed',
 					'mode',
 					'retryOf',
 					'retrySuccessId',
@@ -919,6 +995,7 @@ class App {
 				returnResults.push({
 					id: result.id!.toString(),
 					finished: result.finished,
+					delayed: result.delayed,
 					mode: result.mode,
 					retryOf: result.retryOf ? result.retryOf.toString() : undefined,
 					retrySuccessId: result.retrySuccessId ? result.retrySuccessId.toString() : undefined,
@@ -1173,20 +1250,21 @@ class App {
 			// Cut away the "/webhook/" to get the registred part of the url
 			const requestUrl = (req as ICustomRequest).parsedUrl!.pathname!.slice(this.endpointWebhook.length + 2);
 
-			let response;
+			//let response;
 			try {
-				response = await this.activeWorkflowRunner.executeWebhook('GET', requestUrl, req, res);
+				ResponseHelper.sendSuccessResponse(res, "Event Recieved", true, 200);
+				//response = await this.activeWorkflowRunner.executeWebhook('GET', requestUrl, req, res);
+
 			} catch (error) {
 				ResponseHelper.sendErrorResponse(res, error);
 				return ;
 			}
 
-			if (response.noWebhookResponse === true) {
+			//if (response.noWebhookResponse === true) {
 				// Nothing else to do as the response got already sent
-				return;
-			}
+			//	return;
+			//}
 
-			ResponseHelper.sendSuccessResponse(res, response.data, true, response.responseCode);
 		});
 
 		// POST webhook requests
@@ -1309,6 +1387,8 @@ export async function start(): Promise<void> {
 		server = https.createServer(credentials,app.app);
 	}else{
 		const http = require('http');
+		http.globalAgent.keepAlive = true;
+		http.globalAgent.maxSockets = 100000;
 		server = http.createServer(app.app);
 	}
 

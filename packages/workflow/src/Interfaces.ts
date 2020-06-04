@@ -578,12 +578,21 @@ export interface INodeTypeData {
 export interface IRun {
 	data: IRunExecutionData;
 	finished?: boolean;
+	delayed?: boolean;
+	delayedNodes? : IdelayedNodes[];
 	mode: WorkflowExecuteMode;
 	startedAt: Date;
 	stoppedAt: Date;
 }
 
+export interface IdelayData {
+	delayed? : boolean;
+	delayedNodes? : IdelayedNodes[];
+}
 
+export interface IdelayedNodes {
+	nodeName : string;
+}
 // Contains all the data which is needed to execute a workflow and so also to
 // start restart it again after it did fail.
 // The RunData, ExecuteData and WaitForExecution contain often the same data.
@@ -684,7 +693,7 @@ export interface IWorkflowExecuteAdditionalData {
 	currentNodeParameters? : INodeParameters;
 }
 
-export type WorkflowExecuteMode = 'cli' | 'error' | 'integrated' | 'internal' | 'manual' | 'retry' | 'trigger' | 'webhook';
+export type WorkflowExecuteMode = 'cli' | 'error' | 'integrated' | 'internal' | 'manual' | 'retry' | 'trigger' | 'webhook' | 'delay';
 
 export interface IWorkflowHooksOptionalParameters {
 	parentProcessMode?: string;

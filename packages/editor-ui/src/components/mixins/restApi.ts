@@ -289,6 +289,20 @@ export const restApi = Vue.extend({
 					return self.restApi().makeRestApiRequest('GET', `/executions`, sendData);
 				},
 
+				// Returns all delayed executions
+				// TODO: For sure needs some kind of default filter like last day, with max 10 results, ...
+				getDelayedExecutions: (filter: object, limit: number, lastId?: string | number): Promise<IExecutionsListResponse> => {
+					let sendData = {};
+					if (filter) {
+						sendData = {
+							filter,
+							lastId,
+							limit,
+						};
+					}
+
+					return self.restApi().makeRestApiRequest('GET', `/executions`, sendData);
+				},
 				// Returns all the available timezones
 				getTimezones: (): Promise<IDataObject> => {
 					return self.restApi().makeRestApiRequest('GET', `/options/timezones`);

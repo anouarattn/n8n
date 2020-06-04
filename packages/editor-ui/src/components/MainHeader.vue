@@ -10,6 +10,7 @@
 						<span v-if="isExecutionPage" class="execution-name">
 							<strong>{{executionId}}</strong>&nbsp;
 							<font-awesome-icon icon="check" class="execution-icon success" v-if="executionFinished" title="Execution was successful" />
+							<font-awesome-icon icon="pause" class="execution-icon delayed" v-else-if="executionDelayed" title="Execution was Delayed" />
 							<font-awesome-icon icon="times" class="execution-icon error" v-else title="Execution did fail" />
 						</span>
 							of Workflow
@@ -120,6 +121,25 @@ export default mixins(
 				}
 
 				if (fullExecution.finished === true) {
+					return true;
+				}
+
+				return false;
+			},
+			executionDelayed (): boolean {
+				if (!this.isExecutionPage) {
+					// We are not on an execution page so return false
+					return false;
+				}
+
+				const fullExecution = this.$store.getters.getWorkflowExecution;
+
+				if (fullExecution === null) {
+					// No execution loaded so return also false
+					return false;
+				}
+
+				if (fullExecution.delayed === true) {
 					return true;
 				}
 
@@ -272,6 +292,9 @@ export default mixins(
 	color: #22FF44;
 }
 
+.execution-icon.delayed {
+	color: #eeda47;
+}
 .menu-separator-bottom {
 	border-bottom: 1px solid #707070;
 }

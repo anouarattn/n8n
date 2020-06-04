@@ -27,6 +27,9 @@ export class ExecutionEntity implements IExecutionFlattedDb {
 	@Column()
 	finished: boolean;
 
+	@Column()
+	delayed: boolean;
+
 	@Column('varchar')
 	mode: WorkflowExecuteMode;
 

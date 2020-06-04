@@ -122,6 +122,7 @@ export interface IRestApi {
 	getActivationError(id: string): Promise<IActivationError | undefined >;
 	getCurrentExecutions(filter: object): Promise<IExecutionsCurrentSummaryExtended[]>;
 	getPastExecutions(filter: object, limit: number, lastId?: string | number): Promise<IExecutionsListResponse>;
+	getDelayedExecutions(filter: object, limit: number, lastId?: string | number): Promise<IExecutionsListResponse>;
 	stopCurrentExecution(executionId: string): Promise<IExecutionsStopData>;
 	makeRestApiRequest(method: string, endpoint: string, data?: any): Promise<any>; // tslint:disable-line:no-any
 	getSettings(): Promise<IN8nUISettings>;
@@ -323,6 +324,7 @@ export interface IExecutionsSummary {
 	idActive?: string; // executionIdActive
 	mode: WorkflowExecuteMode;
 	finished?: boolean;
+	delayed?: boolean;
 	retryOf?: string;
 	retrySuccessId?: string;
 	startedAt: Date;

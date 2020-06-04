@@ -79,8 +79,10 @@
 
 						<el-tooltip placement="top" effect="light">
 							<div slot="content" v-html="statusTooltipText(scope.row)"></div>
-
-							<span class="status-badge running" v-if="scope.row.stoppedAt === undefined">
+							<span class="status-badge delayed" v-if="scope.row.delayed">
+								Delayed
+							</span>
+							<span class="status-badge running" v-else-if="scope.row.stoppedAt === undefined">
 								Running
 							</span>
 							<span class="status-badge success" v-else-if="scope.row.finished">
@@ -93,7 +95,7 @@
 
 						<el-dropdown trigger="click" @command="handleRetryClick">
 							<span class="el-dropdown-link">
-								<el-button class="retry-button" circle v-if="scope.row.stoppedAt !== undefined && !scope.row.finished && scope.row.retryOf === undefined && scope.row.retrySuccessId === undefined" type="text" size="small" title="Retry execution">
+								<el-button class="retry-button" circle v-if="scope.row.stoppedAt !== undefined && !scope.row.delayed && !scope.row.finished && scope.row.retryOf === undefined && scope.row.retrySuccessId === undefined" type="text" size="small" title="Retry execution">
 									<font-awesome-icon icon="redo" />
 								</el-button>
 							</span>
@@ -184,8 +186,9 @@ export default mixins(
 	data () {
 		return {
 			finishedExecutions: [] as IExecutionsSummary[],
+			delayedExecutions: [] as IExecutionsSummary[],
 			finishedExecutionsCount: 0,
-
+			delayedExecutionsCount: 0,
 			checkAll: false,
 
 			filter: {
@@ -218,6 +221,10 @@ export default mixins(
 					id: 'success',
 					name: 'Success',
 				},
+				{
+					id: 'delayed',
+					name: 'Delayed',
+				},
 			],
 
 		};
@@ -235,11 +242,13 @@ export default mixins(
 			if (['ALL', 'error', 'success'].includes(this.filter.status)) {
 				returnData.push.apply(returnData, this.finishedExecutions);
 			}
-
+			if (['delayed'].includes(this.filter.status)) {
+				returnData.push.apply(returnData, this.delayedExecutions);
+			}
 			return returnData;
 		},
 		combinedExecutionsCount (): number {
-			return this.activeExecutions.length + this.finishedExecutionsCount;
+			return this.activeExecutions.length + this.finishedExecutionsCount + this.delayedExecutionsCount;
 		},
 		numSelected (): number {
 			if (this.checkAll === true) {
@@ -271,6 +280,19 @@ export default mixins(
 				filter.workflowId = this.filter.workflowId;
 			}
 			if (['error', 'success'].includes(this.filter.status)) {
+				filter.finished = this.filter.status === 'success';
+			}
+			return filter;
+		},
+		workflowFilterDelayed (): IDataObject {
+			const filter: IDataObject = {};
+			if (this.filter.workflowId !== 'ALL') {
+				filter.workflowId = this.filter.workflowId;
+			}
+			if (['error', 'success'].includes(this.filter.status)) {
+				filter.finished = this.filter.status === 'success';
+			}
+			if (['delayed'].includes(this.filter.status)) {
 				filter.finished = this.filter.status === 'success';
 			}
 			return filter;
@@ -395,6 +417,16 @@ export default mixins(
 			this.finishedExecutions = data.results;
 			this.finishedExecutionsCount = data.count;
 		},
+		async loadDelayedExecutions (): Promise<void> {
+			if (this.filter.status === 'running') {
+				this.delayedExecutions = [];
+				this.delayedExecutionsCount = 0;
+				return;
+			}
+			const data = await this.restApi().getPastExecutions(this.workflowFilterPast, this.requestItemsPerRequest);
+			this.delayedExecutions = data.results;
+			this.delayedExecutionsCount = data.count;
+		},
 		async loadMore () {
 			if (this.filter.status === 'running') {
 				return;
@@ -501,6 +533,8 @@ export default mixins(
 				return 'The worklow is currently executing.';
 			} else if (entry.finished === true && entry.retryOf !== undefined) {
 				return `The workflow execution was a retry of "${entry.retryOf}" and it was successful.`;
+			} else if (entry.delayed === true) {
+				return 'The worklow execution was delayed.';
 			} else if (entry.finished === true) {
 				return 'The worklow execution was successful.';
 			} else if (entry.retryOf !== undefined) {
@@ -587,6 +621,11 @@ export default mixins(
 	&.success {
 		background-color: $--custom-success-background;
 		color: $--custom-success-text;
+	}
+
+	&.delayed {
+		background-color: $--custom-delayed-background;
+		color: $--custom-delayed-text;
 	}
 }
 

@@ -190,7 +190,7 @@ process.on('message', async (message: IProcessMessage) => {
 				runData = workflowRunner.workflowExecute.getFullRunData(workflowRunner.startedAt);
 
 				// If there is any data send it to parent process
-				await workflowRunner.workflowExecute.processSuccessExecution(workflowRunner.startedAt, workflowRunner.workflow!);
+				await workflowRunner.workflowExecute.processSuccessExecution(workflowRunner.startedAt, workflowRunner.workflow!, false);
 			} else {
 				// Workflow did not get started yet
 				runData = {

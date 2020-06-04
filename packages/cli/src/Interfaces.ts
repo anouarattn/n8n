@@ -40,6 +40,7 @@ export interface IDatabaseCollections {
 	Credentials: Repository<ICredentialsDb> | null;
 	Execution: Repository<IExecutionFlattedDb> | null;
 	Workflow: Repository<IWorkflowDb> | null;
+	Delay: Repository<IDelayDb> | null;
 }
 
 
@@ -97,6 +98,7 @@ export interface IExecutionBase {
 	stoppedAt: Date;
 	workflowId?: string; // To be able to filter executions easily //
 	finished: boolean;
+	delayed?: boolean;
 	retryOf?: number | string | ObjectID; // If it is a retry, the id of the execution it is a retry of.
 	retrySuccessId?: number | string | ObjectID; // If it failed and a retry did succeed. The id of the successful retry.
 }
@@ -151,10 +153,18 @@ export interface IExecutionsStopData {
 	stoppedAt: Date;
 }
 
+export interface IDelayDb  {
+	id?:  number | string | ObjectID;
+	executionId: number | string | ObjectID;
+	endAt: Date;
+	delayedNodes : string;
+}
+
 export interface IExecutionsSummary {
 	id?: string; // executionIdDb
 	idActive?: string; // executionIdActive
 	finished?: boolean;
+	delayed?: boolean;
 	mode: WorkflowExecuteMode;
 	retryOf?: string;
 	retrySuccessId?: string;

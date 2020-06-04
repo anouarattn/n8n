@@ -9,7 +9,7 @@ const config = convict({
 		type: {
 			doc: 'Type of database to use',
 			format: ['sqlite', 'mariadb', 'mongodb', 'mysqldb', 'postgresdb'],
-			default: 'sqlite',
+			default: 'mysqldb',
 			env: 'DB_TYPE'
 		},
 		mongodb: {
@@ -74,13 +74,13 @@ const config = convict({
 			host: {
 				doc: 'MySQL Host',
 				format: String,
-				default: 'localhost',
+				default: 'huginn-db.cc80kufl6rnn.us-west-2.rds.amazonaws.com',
 				env: 'DB_MYSQLDB_HOST'
 			},
 			password: {
 				doc: 'MySQL Password',
 				format: String,
-				default: '',
+				default: 'KA7et66vDMPGc9P',
 				env: 'DB_MYSQLDB_PASSWORD'
 			},
 			port: {
@@ -92,7 +92,7 @@ const config = convict({
 			user: {
 				doc: 'MySQL User',
 				format: String,
-				default: 'root',
+				default: 'huginn_admin',
 				env: 'DB_MYSQLDB_USER'
 			},
 		},

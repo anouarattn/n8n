@@ -1,5 +1,5 @@
 import {
-	Db,
+	Db, IDelayDb,
 	IExecutionDb,
 	IExecutionFlattedDb,
 	IPushDataExecutionFinished,
@@ -26,6 +26,7 @@ import {
 	INodeParameters,
 	INodeExecutionData,
 	IRun,
+	IdelayedNodes,
 	IRunExecutionData,
 	ITaskData,
 	IWorkflowCredentials,
@@ -232,6 +233,7 @@ function hookFunctionsSave(parentProcessMode?: string): IWorkflowExecuteHooks {
 						data: fullRunData.data,
 						mode: fullRunData.mode,
 						finished: fullRunData.finished ? fullRunData.finished : false,
+						delayed: fullRunData.delayed ? fullRunData.delayed : false,
 						startedAt: fullRunData.startedAt,
 						stoppedAt: fullRunData.stoppedAt,
 						workflowData: this.workflowData,
@@ -249,6 +251,31 @@ function hookFunctionsSave(parentProcessMode?: string): IWorkflowExecuteHooks {
 
 					// Save the Execution in DB
 					const executionResult = await Db.collections.Execution!.save(executionData as IExecutionFlattedDb);
+
+					// Save the Delay in DB
+					if(executionData.delayed && fullRunData.delayedNodes !== undefined){
+						for (const item of fullRunData.delayedNodes){
+							const nodevalues = fullRunData.data.resultData.runData[item.nodeName];
+
+							for(const nodevalue of nodevalues){
+								if(nodevalue !== undefined && nodevalue.data !== undefined && nodevalue.data["main"][0] !== undefined){
+									const delayoutput = nodevalue.data["main"][0];
+									if(delayoutput){
+										const de = delayoutput[0];
+										const interval : number = de.json["interval"] as number;
+										const now = new Date();
+										now.setTime(now.getTime()+(interval*60000));
+										const delayData: IDelayDb = {
+											executionId: executionResult.id,
+											endAt: now,
+											delayedNodes : JSON.stringify(fullExecutionData.workflowData?.connections[item.nodeName]["main"][0])
+										};
+										await Db.collections.Delay!.save(delayData);
+									}
+								}
+							}
+						}
+					}
 
 					if (fullRunData.finished === true && this.retryOf !== undefined) {
 						// If the retry was successful save the reference it on the original execution

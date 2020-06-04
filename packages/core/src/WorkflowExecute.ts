@@ -9,6 +9,7 @@ import {
 	INodeConnections,
 	INodeExecutionData,
 	IRun,
+	IdelayData,
 	IRunData,
 	IRunExecutionData,
 	ITaskData,
@@ -475,14 +476,17 @@ export class WorkflowExecute {
 
 		return new PCancelable((resolve, reject, onCancel) => {
 			let gotCancel = false;
-
+			const delayData : IdelayData = {
+				delayed : false,
+				delayedNodes : [],
+			} ;
 			onCancel.shouldReject = false;
 			onCancel(() => {
 				gotCancel = true;
 			});
 
 			const returnPromise = (async () => {
-
+				const nodeExecutionStackDelayed: IExecuteData[] = [];
 				executionLoop:
 				while (this.runExecutionData.executionData!.nodeExecutionStack.length !== 0) {
 
@@ -496,6 +500,18 @@ export class WorkflowExecute {
 					executionData = this.runExecutionData.executionData!.nodeExecutionStack.shift() as IExecuteData;
 					executionNode = executionData.node;
 
+					let nrun = false;
+					if(delayData.delayedNodes !== undefined && delayData.delayedNodes.length>0){
+						for(const item of delayData.delayedNodes){
+							if(JSON.stringify(workflow.connectionsByDestinationNode[executionNode.name]).includes(item.nodeName)){
+								nodeExecutionStackDelayed.push(executionData);
+								nrun = true;
+							}
+						}
+					}
+					if(nrun) {
+						continue;
+					}
 					this.executeHook('nodeExecuteBefore', [executionNode.name]);
 
 					// Get the index of the current run
@@ -694,15 +710,22 @@ export class WorkflowExecute {
 
 									this.addNodeToBeExecuted(workflow, connectionData, parseInt(outputIndex, 10), executionNode.name, nodeSuccessData!, runIndex);
 								}
+								if(executionNode.type.match("n8n-nodes-base.Delay") &&  delayData.delayedNodes !== undefined){
+									delayData.delayed = true;
+									delayData.delayedNodes.push({nodeName:executionNode.name.toString()});
+
+								}
 							}
 						}
 					}
 				}
-
-				return Promise.resolve();
+				for(const item of nodeExecutionStackDelayed){
+					this.runExecutionData.executionData!.nodeExecutionStack.push(item);
+				}
+				return Promise.resolve(delayData);
 			})()
-			.then(async () => {
-				return this.processSuccessExecution(startedAt, workflow, executionError);
+			.then(async (delayData) => {
+				return this.processSuccessExecution(startedAt, workflow, delayData, executionError);
 			})
 			.catch(async (error) => {
 				const fullRunData = this.getFullRunData(startedAt);
@@ -730,12 +753,18 @@ export class WorkflowExecute {
 
 
 	// @ts-ignore
-	async processSuccessExecution(startedAt: Date, workflow: Workflow, executionError?: IExecutionError): PCancelable<IRun> {
+	async processSuccessExecution(startedAt: Date, workflow: Workflow, delayData, executionError?: IExecutionError): PCancelable<IRun> {
 		const fullRunData = this.getFullRunData(startedAt);
 
 		if (executionError !== undefined) {
 			fullRunData.data.resultData.error = executionError;
-		} else {
+		}
+		else if(delayData.delayed){
+			fullRunData.delayed = true;
+			fullRunData.finished = false;
+			fullRunData.delayedNodes = delayData.delayedNodes;
+		}
+		else {
 			fullRunData.finished = true;
 		}
 

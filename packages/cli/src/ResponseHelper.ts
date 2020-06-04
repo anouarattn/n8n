@@ -147,6 +147,7 @@ export function flattenExecutionData(fullExecutionData: IExecutionDb): IExecutio
 		startedAt: fullExecutionData.startedAt,
 		stoppedAt: fullExecutionData.stoppedAt,
 		finished: fullExecutionData.finished ? fullExecutionData.finished : false,
+		delayed: fullExecutionData.delayed ? fullExecutionData.delayed : false,
 		workflowId: fullExecutionData.workflowId,
 		workflowData: fullExecutionData.workflowData!,
 	});
@@ -183,7 +184,8 @@ export function unflattenExecutionData(fullExecutionData: IExecutionFlattedDb): 
 		mode: fullExecutionData.mode,
 		startedAt: fullExecutionData.startedAt,
 		stoppedAt: fullExecutionData.stoppedAt,
-		finished: fullExecutionData.finished ? fullExecutionData.finished : false
+		finished: fullExecutionData.finished ? fullExecutionData.finished : false,
+		delayed: fullExecutionData.delayed ? fullExecutionData.delayed : false
 	});
 
 	return returnData;
