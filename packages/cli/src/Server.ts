@@ -1250,10 +1250,9 @@ class App {
 			// Cut away the "/webhook/" to get the registred part of the url
 			const requestUrl = (req as ICustomRequest).parsedUrl!.pathname!.slice(this.endpointWebhook.length + 2);
 
-			//let response;
 			try {
 				ResponseHelper.sendSuccessResponse(res, "Event Recieved", true, 200);
-				//response = await this.activeWorkflowRunner.executeWebhook('GET', requestUrl, req, res);
+				this.activeWorkflowRunner.executeWebhook('GET', requestUrl, req, res);
 
 			} catch (error) {
 				ResponseHelper.sendErrorResponse(res, error);
