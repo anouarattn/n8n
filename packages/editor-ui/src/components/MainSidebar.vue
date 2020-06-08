@@ -15,9 +15,9 @@
 			<el-menu default-active="workflow" @select="handleSelect" :collapse="isCollapsed">
 
 				<el-menu-item index="logo" class="logo-item">
-					<a href="https://n8n.io" target="_blank" class="logo">
-						<img src="/n8n-icon-small.png" class="icon" alt="n8n.io"/>
-						<span class="logo-text" slot="title">n8n.io</span>
+					<a href="http://automations.chatmantics.com/" target="_blank" class="logo">
+						<img src="https://www.chatmantics.com/img/howitworks-icon.png" class="icon" alt="automations.chatmantics.com"/>
+						<span class="logo-text" slot="title">Beta</span>
 					</a>
 				</el-menu-item>
 
@@ -522,7 +522,7 @@ export default mixins(
 
 		.icon {
 			position: relative;
-			height: 23px;
+			height: 70px;
 			left: -10px;
 			top: -2px;
 		}
@@ -535,10 +535,10 @@ a.logo {
 
 .logo-text {
 	position: relative;
-	top: -3px;
-	left: 5px;
+	top: 4px;
+	left: -5px;
 	font-weight: bold;
-	color: #fff;
+	color: #ffffff;
 	text-decoration: none;
 }
 

@@ -96,6 +96,7 @@ class App {
 	testWebhooks: TestWebhooks.TestWebhooks;
 	endpointWebhook: string;
 	endpointWebhookTest: string;
+	disableGUI: string;
 	saveDataErrorExecution: string;
 	saveDataSuccessExecution: string;
 	saveManualExecutions: boolean;
@@ -114,6 +115,7 @@ class App {
 		this.endpointWebhook = config.get('endpoints.webhook') as string;
 		this.endpointWebhookTest = config.get('endpoints.webhookTest') as string;
 		this.saveDataErrorExecution = config.get('executions.saveDataOnError') as string;
+		this.disableGUI = config.get('executions.disableGUI') as string;
 		this.saveDataSuccessExecution = config.get('executions.saveDataOnSuccess') as string;
 		this.saveManualExecutions = config.get('executions.saveDataManualExecutions') as boolean;
 		this.timezone = config.get('generic.timezone') as string;
@@ -571,6 +573,7 @@ class App {
 				// Before deleting a workflow deactivate it
 				await this.activeWorkflowRunner.remove(id);
 			}
+
 
 			await Db.collections.Workflow!.delete(id);
 
@@ -1117,6 +1120,7 @@ class App {
 			} else if (deleteData.ids !== undefined) {
 				// Deletes all executions with the given ids
 				await Db.collections.Execution!.delete(deleteData.ids);
+				await Db.collections.Delay!.delete({executionId: deleteData.ids});
 			} else {
 				throw new Error('Required body-data "ids" or "deleteBefore" is missing!');
 			}
@@ -1250,20 +1254,20 @@ class App {
 			// Cut away the "/webhook/" to get the registred part of the url
 			const requestUrl = (req as ICustomRequest).parsedUrl!.pathname!.slice(this.endpointWebhook.length + 2);
 
+			let response;
 			try {
-				ResponseHelper.sendSuccessResponse(res, "Event Recieved", true, 200);
-				this.activeWorkflowRunner.executeWebhook('GET', requestUrl, req, res);
-
+				response = await this.activeWorkflowRunner.executeWebhook('GET', requestUrl, req, res);
 			} catch (error) {
 				ResponseHelper.sendErrorResponse(res, error);
 				return ;
 			}
 
-			//if (response.noWebhookResponse === true) {
+			if (response.noWebhookResponse === true) {
 				// Nothing else to do as the response got already sent
-			//	return;
-			//}
+				return;
+			}
 
+			ResponseHelper.sendSuccessResponse(res, response.data, true, response.responseCode);
 		});
 
 		// POST webhook requests
@@ -1352,19 +1356,22 @@ class App {
 
 
 		// Serve the website
-		const startTime = (new Date()).toUTCString();
-		const editorUiPath = require.resolve('n8n-editor-ui');
-		this.app.use('/', express.static(pathJoin(pathDirname(editorUiPath), 'dist'), {
-			index: 'index.html',
-			setHeaders: (res, path) => {
-				if (res.req && res.req.url === '/index.html') {
-					// Set last modified date manually to n8n start time so
-					// that it hopefully refreshes the page when a new version
-					// got used
-					res.setHeader('Last-Modified', startTime);
+		if(this.disableGUI === 'false'){
+			const startTime = (new Date()).toUTCString();
+			const editorUiPath = require.resolve('n8n-editor-ui');
+			this.app.use('/', express.static(pathJoin(pathDirname(editorUiPath), 'dist'), {
+				index: 'index.html',
+				setHeaders: (res, path) => {
+					if (res.req && res.req.url === '/index.html') {
+						// Set last modified date manually to n8n start time so
+						// that it hopefully refreshes the page when a new version
+						// got used
+						res.setHeader('Last-Modified', startTime);
+					}
 				}
-			}
-		}));
+			}));
+		}
+
 	}
 
 }

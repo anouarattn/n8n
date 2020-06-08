@@ -68,7 +68,7 @@ const config = convict({
 			database: {
 				doc: 'MySQL Database',
 				format: String,
-				default: 'n8n',
+				default: 'n8n2',
 				env: 'DB_MYSQLDB_DATABASE'
 			},
 			host: {
@@ -121,6 +121,12 @@ const config = convict({
 			format: ['all', 'none'],
 			default: 'all',
 			env: 'EXECUTIONS_DATA_SAVE_ON_ERROR'
+		},
+		disableGUI: {
+			doc: 'Disable GUI and let api only',
+			format: ['true', 'false'],
+			default: 'false',
+			env: 'N8N_DISABLE_GUI'
 		},
 		saveDataOnSuccess: {
 			doc: 'What workflow execution data to save on success',

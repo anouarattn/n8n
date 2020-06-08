@@ -293,7 +293,7 @@ export default mixins(
 				filter.finished = this.filter.status === 'success';
 			}
 			if (['delayed'].includes(this.filter.status)) {
-				filter.finished = this.filter.status === 'success';
+				filter.delayed = true;
 			}
 			return filter;
 		},
@@ -423,7 +423,7 @@ export default mixins(
 				this.delayedExecutionsCount = 0;
 				return;
 			}
-			const data = await this.restApi().getPastExecutions(this.workflowFilterPast, this.requestItemsPerRequest);
+			const data = await this.restApi().getPastExecutions(this.workflowFilterDelayed, this.requestItemsPerRequest);
 			this.delayedExecutions = data.results;
 			this.delayedExecutionsCount = data.count;
 		},
@@ -521,7 +521,8 @@ export default mixins(
 			try {
 				const activeExecutionsPromise = this.loadActiveExecutions();
 				const finishedExecutionsPromise = this.loadFinishedExecutions();
-				await Promise.all([activeExecutionsPromise, finishedExecutionsPromise]);
+				const delayedExecutionsPromise = this.loadDelayedExecutions();
+				await Promise.all([activeExecutionsPromise, finishedExecutionsPromise,delayedExecutionsPromise]);
 			} catch (error) {
 				this.$showError(error, 'Problem loading', 'There was a problem loading the data:');
 			}
