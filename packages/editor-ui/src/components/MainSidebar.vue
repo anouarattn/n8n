@@ -15,8 +15,8 @@
 			<el-menu default-active="workflow" @select="handleSelect" :collapse="isCollapsed">
 
 				<el-menu-item index="logo" class="logo-item">
-					<a href="http://automations.chatmantics.com/" target="_blank" class="logo">
-						<img src="https://www.chatmantics.com/img/howitworks-icon.png" class="icon" alt="automations.chatmantics.com"/>
+					<a href="https://flow.chatmantics.com/" target="_blank" class="logo">
+						<img src="https://www.chatmantics.com/img/howitworks-icon.png" class="icon" alt="flow.chatmantics.com"/>
 						<span class="logo-text" slot="title">Beta</span>
 					</a>
 				</el-menu-item>
@@ -113,45 +113,6 @@
 					<font-awesome-icon icon="tasks"/>&nbsp;
 					<span slot="title" class="item-title-root">Executions</span>
 				</el-menu-item>
-
-				<el-submenu index="help" class="help-menu" title="Help">
-					<template slot="title">
-						<font-awesome-icon icon="question"/>&nbsp;
-						<span slot="title" class="item-title-root">Help</span>
-					</template>
-
-					<el-menu-item index="help-documentation">
-						<template slot="title">
-							<a href="https://docs.n8n.io" target="_blank">
-								<font-awesome-icon icon="book"/>
-								<span slot="title" class="item-title">Documentation</span>
-							</a>
-						</template>
-					</el-menu-item>
-					<el-menu-item index="help-forum">
-						<template slot="title">
-							<a href="https://community.n8n.io" target="_blank">
-								<font-awesome-icon icon="users"/>
-								<span slot="title" class="item-title">Forum</span>
-							</a>
-						</template>
-					</el-menu-item>
-					<el-menu-item index="help-examples">
-						<template slot="title">
-							<a href="https://n8n.io/workflows" target="_blank">
-								<font-awesome-icon icon="network-wired"/>
-								<span slot="title" class="item-title">Workflows</span>
-							</a>
-						</template>
-					</el-menu-item>
-					<el-menu-item index="help-about">
-						<template slot="title">
-							<font-awesome-icon class="about-icon" icon="info"/>
-							<span slot="title" class="item-title">About n8n</span>
-						</template>
-					</el-menu-item>
-				</el-submenu>
-
 			</el-menu>
 
 		</div>
