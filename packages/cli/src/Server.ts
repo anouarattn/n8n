@@ -203,8 +203,8 @@ class App {
 								});
 							}
 							if(entry.id !== undefined){
-								Db.collections.Delay!.delete(entry.id);
-								Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
+								await Db.collections.Delay!.delete(entry.id);
+								await Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
 							}
 
 						});
@@ -1120,7 +1120,12 @@ class App {
 			} else if (deleteData.ids !== undefined) {
 				// Deletes all executions with the given ids
 				await Db.collections.Execution!.delete(deleteData.ids);
-				await Db.collections.Delay!.delete({executionId: deleteData.ids});
+				for(const id of deleteData.ids){
+					const filters2 = {
+						executionId: id,
+					};
+					await Db.collections.Delay!.delete(filters2);
+				}
 			} else {
 				throw new Error('Required body-data "ids" or "deleteBefore" is missing!');
 			}
