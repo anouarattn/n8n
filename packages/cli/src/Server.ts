@@ -149,9 +149,9 @@ class App {
 		const authIgnoreRegex = new RegExp(`^\/(healthz|${this.endpointWebhook}|${this.endpointWebhookTest})\/?.*$`);
 
 
-		const job = new CronJob('10 * * * * *', () =>  {
+		const job = new CronJob('10 * * * * *', async () =>  {
 
-			const resultsPromise =  Db.collections.Delay!.find({
+			const result =  await Db.collections.Delay!.find({
 				select: [
 					'id',
 					'endAt',
@@ -164,55 +164,49 @@ class App {
 				order: {
 					id: 'DESC',
 				},
-				take: 200,
+				take: 3000,
 			});
-			resultsPromise.then(async (result)=>{
-				for (const entry of result) {
-					const promiseresult =  Db.collections.Execution!.findOne(entry.executionId);
-					promiseresult.then(async  (fullExecutionDataFlatted)=>{
-						if (fullExecutionDataFlatted === undefined) {
-							throw new ResponseHelper.ResponseError(`The execution with the id "${entry.executionId}" does not exist.`, 404, 404);
-						}
-						const fullExecutionData = ResponseHelper.unflattenExecutionData(fullExecutionDataFlatted);
-						if (fullExecutionData.finished === true) {
-							throw new Error('The execution did succeed and can so not be retried.');
-						}
-						const executionMode = 'delay';
 
-						const credentialsPromise =  WorkflowCredentials(fullExecutionData.workflowData.nodes);
-						credentialsPromise.then(async (credentials) =>{
-							fullExecutionData.workflowData.active = false;
-
-							// Start the workflow
-							const data: IWorkflowExecutionDataProcess = {
-								credentials,
-								executionMode,
-								executionData: fullExecutionData.data,
-								workflowData: fullExecutionData.workflowData,
-							};
-							for(const item of JSON.parse(entry.delayedNodes))
-							{
-								const lastNodeExecuted = item.node;
-								const workflowRunner = new WorkflowRunner();
-								const executionIdPromise =  workflowRunner.run(data).then(async (executionId)=>{
-									const executionData = await this.activeExecutionsInstance.getPostExecutePromise(executionId);
-
-									if (executionData === undefined) {
-										throw new Error('The delay did not start for an unknown reason.');
-									}
-								});
-							}
-							if(entry.id !== undefined){
-								await Db.collections.Delay!.delete(entry.id);
-								await Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
-							}
-
-						});
-
-					});
-
+			for (const entry of result) {
+				const fullExecutionDataFlatted =  await Db.collections.Execution!.findOne(entry.executionId);
+				if (fullExecutionDataFlatted === undefined) {
+					throw new ResponseHelper.ResponseError(`The execution with the id "${entry.executionId}" does not exist.`, 404, 404);
 				}
-			});
+				const fullExecutionData = ResponseHelper.unflattenExecutionData(fullExecutionDataFlatted);
+				if (fullExecutionData.finished === true) {
+					throw new Error('The execution did succeed and can so not be retried.');
+				}
+				const executionMode = 'delay';
+
+				const credentials =  await WorkflowCredentials(fullExecutionData.workflowData.nodes);
+				fullExecutionData.workflowData.active = false;
+
+				// Start the workflow
+				const data: IWorkflowExecutionDataProcess = {
+					credentials,
+					executionMode,
+					executionData: fullExecutionData.data,
+					workflowData: fullExecutionData.workflowData,
+				};
+				for(const item of JSON.parse(entry.delayedNodes))
+				{
+					const lastNodeExecuted = item.node;
+					const workflowRunner = new WorkflowRunner();
+					const executionIdPromise =  workflowRunner.run(data).then(async (executionId)=>{
+						const executionData = await this.activeExecutionsInstance.getPostExecutePromise(executionId);
+
+						if (executionData === undefined) {
+							throw new Error('The delay did not start for an unknown reason.');
+						}
+					});
+				}
+				if(entry.id !== undefined){
+					await Db.collections.Delay!.delete(entry.id);
+					await Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
+				}
+
+
+			}
 
 
 		}, null, true, 'America/Los_Angeles');
@@ -328,10 +322,10 @@ class App {
 		// Support application/xml type post data
 		// @ts-ignore
 		this.app.use(bodyParser.xml({ limit: '16mb', xmlParseOptions: {
-			normalize: true,     // Trim whitespace inside text nodes
-			normalizeTags: true, // Transform tags to lowercase
-			explicitArray: false, // Only put properties in array if length > 1
-		  } }));
+				normalize: true,     // Trim whitespace inside text nodes
+				normalizeTags: true, // Transform tags to lowercase
+				explicitArray: false, // Only put properties in array if length > 1
+			} }));
 
 		this.app.use(bodyParser.text({
 			limit: '16mb', verify: (req, res, buf) => {
