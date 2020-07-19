@@ -162,55 +162,54 @@ class App {
 					endAt : LessThan(new Date())
 				},
 				order: {
-					id: 'DESC',
+					id: 'ASC',
 				},
-				take: 200,
+				take: 3000,
 			});
 			resultsPromise.then(async (result)=>{
 				for (const entry of result) {
 					const promiseresult =  Db.collections.Execution!.findOne(entry.executionId);
 					promiseresult.then(async  (fullExecutionDataFlatted)=>{
 						if (fullExecutionDataFlatted === undefined) {
-							throw new ResponseHelper.ResponseError(`The execution with the id "${entry.executionId}" does not exist.`, 404, 404);
+							console.log("Execution object undefined");
 						}
-						const fullExecutionData = ResponseHelper.unflattenExecutionData(fullExecutionDataFlatted);
-						if (fullExecutionData.finished === true) {
-							throw new Error('The execution did succeed and can so not be retried.');
+						else{
+							const fullExecutionData = ResponseHelper.unflattenExecutionData(fullExecutionDataFlatted);
+							if (fullExecutionData.finished === true) {
+								throw new Error('The execution did succeed and can so not be retried.');
+							}
+							const executionMode = 'delay';
+
+							const credentialsPromise =  WorkflowCredentials(fullExecutionData.workflowData.nodes);
+							credentialsPromise.then(async (credentials) =>{
+								fullExecutionData.workflowData.active = false;
+
+								// Start the workflow
+								const data: IWorkflowExecutionDataProcess = {
+									credentials,
+									executionMode,
+									executionData: fullExecutionData.data,
+									workflowData: fullExecutionData.workflowData,
+								};
+								for(const item of JSON.parse(entry.delayedNodes))
+								{
+									const lastNodeExecuted = item.node;
+									const workflowRunner = new WorkflowRunner();
+									const executionIdPromise =  workflowRunner.run(data).then(async (executionId)=>{
+										const executionData = await this.activeExecutionsInstance.getPostExecutePromise(executionId);
+
+										if (executionData === undefined) {
+											throw new Error('The delay did not start for an unknown reason.');
+										}
+									});
+								}
+								if(entry.id !== undefined){
+									await Db.collections.Delay!.delete(entry.id);
+									await Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
+								}
+							});
 						}
-						const executionMode = 'delay';
-
-						const credentialsPromise =  WorkflowCredentials(fullExecutionData.workflowData.nodes);
-						credentialsPromise.then(async (credentials) =>{
-							fullExecutionData.workflowData.active = false;
-
-							// Start the workflow
-							const data: IWorkflowExecutionDataProcess = {
-								credentials,
-								executionMode,
-								executionData: fullExecutionData.data,
-								workflowData: fullExecutionData.workflowData,
-							};
-							for(const item of JSON.parse(entry.delayedNodes))
-							{
-								const lastNodeExecuted = item.node;
-								const workflowRunner = new WorkflowRunner();
-								const executionIdPromise =  workflowRunner.run(data).then(async (executionId)=>{
-									const executionData = await this.activeExecutionsInstance.getPostExecutePromise(executionId);
-
-									if (executionData === undefined) {
-										throw new Error('The delay did not start for an unknown reason.');
-									}
-								});
-							}
-							if(entry.id !== undefined){
-								await Db.collections.Delay!.delete(entry.id);
-								await Db.collections.Execution!.delete(fullExecutionDataFlatted.id);
-							}
-
-						});
-
 					});
-
 				}
 			});
 
