@@ -1,5 +1,7 @@
 <template>
 	<span>
+
+
 		<el-dialog :visible="dialogVisible" append-to-body width="80%" :title="`Workflow Executions (${combinedExecutions.length}/${combinedExecutionsCount})`" :before-close="closeDialog">
 			<div class="filters">
 				<el-row>
@@ -248,7 +250,7 @@ export default mixins(
 			return returnData;
 		},
 		combinedExecutionsCount (): number {
-			return this.activeExecutions.length + this.finishedExecutionsCount + this.delayedExecutionsCount;
+			return this.activeExecutions.length + this.finishedExecutionsCount ;
 		},
 		numSelected (): number {
 			if (this.checkAll === true) {
